@@ -19,7 +19,7 @@ class m170510_033438_create_user_table extends CDbMigration
 				'id' => 'pk',
 				'username' => 'varchar(20) NOT NULL',
 				'password' => 'text NOT NULL',
-		));
+		), 'ENGINE=InnoDB');
 		
 		$this->insert('tcg_users', array(
 			'username' => 'apigram',

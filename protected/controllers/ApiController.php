@@ -28,7 +28,7 @@ class ApiController extends Controller
 		if(empty($models)) {
 			// No
 			$this->_sendResponse(200,
-					sprintf('No items where found for model <b>%s</b>', $_GET['model']) );
+					sprintf('No items were found for model <b>%s</b>', $_GET['model']) );
 		} else {
 			// Prepare response
 			$rows = array();

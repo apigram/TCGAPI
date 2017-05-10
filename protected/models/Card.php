@@ -86,9 +86,6 @@ class Card extends CActiveRecord
 
 		$criteria=new CDbCriteria;
 
-		$criteria->compare('id',$this->id);
-		$criteria->compare('image_data',$this->image_data,true);
-		$criteria->compare('image_type',$this->image_type,true);
 		$criteria->compare('name',$this->name,true);
 		$criteria->compare('notes',$this->notes,true);
 		$criteria->compare('quantity',$this->quantity);

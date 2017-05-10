@@ -11,18 +11,111 @@ $this->pageTitle=Yii::app()->name;
 <table>
 	<thead>
 		<tr>
+			<th>Action</th>
 			<th>URL</th>
-			<th>Request header</th>
+			<th>Request Type</th>
 			<th>Request body</th>
-			<th>Response body</th>
+			<th>Sample Response body</th>
 		</tr>
 	</thead>
 	<tbody>
 		<tr>
-			<td>tcgmanager.localhost/new</td>
-			<td>CREATE</td>
-			<td></td>
-			<td></td>
+			<td>Create</td>
+			<td>tcgmanager.localhost/api/card</td>
+			<td>POST</td>
+			<td>
+				<pre>name={string}
+image_data={binary}
+image_type={MIME-type}
+notes={string}
+quantity={number}
+				</pre>
+			</td>
+			<td>
+				<pre>{
+	"name":{name},
+	"image_data":{image_data},
+	"image_type":{image_type},
+	"notes":{notes},
+	"quantity":{quantity},
+	"id":{id}
+}
+				</pre>
+			</td>
+		</tr>
+		<tr>
+			<td>Get summary of all cards</td>
+			<td>tcgmanager.localhost/api/card</td>
+			<td>GET</td>
+			<td>
+				Nil
+			</td>
+			<td>
+				<pre>[{
+	"id":{id},
+	"name":{name},
+	"image_data":{image_data},
+	"image_type":{image_type},
+	"quantity":{quantity},
+}]
+				</pre>
+			</td>
+		</tr>
+		<tr>
+			<td>Get single card detail</td>
+			<td>tcgmanager.localhost/api/card/{id}</td>
+			<td>GET</td>
+			<td>
+				Nil
+			</td>
+			<td>
+				<pre>{
+	"id":{id},
+	"name":{name},
+	"image_data":{image_data},
+	"image_type":{image_type},
+	"notes":{notes},
+	"quantity":{quantity}
+}
+				</pre>
+			</td>
+		</tr>
+		<tr>
+			<td>Update single card</td>
+			<td>tcgmanager.localhost/api/card/{id}</td>
+			<td>PUT</td>
+			<td>
+				<pre>{
+	"name":{name},
+	"image_data":{image_data},
+	"image_type":{image_type},
+	"notes":{notes},
+	"quantity":{quantity}
+}
+				</pre>
+			</td>
+			<td>
+				<pre>{
+	"name":{name},
+	"image_data":{image_data},
+	"image_type":{image_type},
+	"notes":{notes},
+	"quantity":{quantity},
+	"id":{id}
+}
+				</pre>
+			</td>
+		</tr>
+		<tr>
+			<td>Delete single card</td>
+			<td>tcgmanager.localhost/api/card/{id}</td>
+			<td>DELETE</td>
+			<td>
+				Nil
+			</td>
+			<td>
+				# of records deleted.
+			</td>
 		</tr>
 	</tbody>
 </table>
