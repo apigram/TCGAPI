@@ -68,7 +68,7 @@ class ApiController extends Controller
      */
     public function actionCreate()
     {
-        //$this->_checkAuth();
+        $this->_checkAuth();
         switch ($_GET['model']) {
             // Get an instance of the respective model
             case 'card':
@@ -115,7 +115,7 @@ class ApiController extends Controller
      */
     public function actionUpdate()
     {
-        //$this->_checkAuth();
+        $this->_checkAuth();
         // Parse the PUT parameters. This didn't work: parse_str(file_get_contents('php://input'), $put_vars);
         $json = file_get_contents('php://input'); //$GLOBALS['HTTP_RAW_POST_DATA'] is not preferred: http://www.php.net/manual/en/ini.core.php#ini.always-populate-raw-post-data
         $put_vars = CJSON::decode($json, true);  //true means use associative array
@@ -171,7 +171,7 @@ class ApiController extends Controller
 
     public function actionDelete()
     {
-        //$this->_checkAuth();
+        $this->_checkAuth();
         switch ($_GET['model']) {
             // Load the respective model
             case 'card':
@@ -280,12 +280,12 @@ class ApiController extends Controller
     private function _checkAuth()
     {
         // Check if we have the USERNAME and PASSWORD HTTP headers set?
-        if (!(isset($_SERVER['HTTP_X_USERNAME']) and isset($_SERVER['HTTP_X_PASSWORD']))) {
+        if (!(isset($_SERVER['PHP_AUTH_USER']) and isset($_SERVER['PHP_AUTH_PW']))) {
             // Error: Unauthorized
             $this->_sendResponse(401);
         }
-        $username = $_SERVER['HTTP_X_USERNAME'];
-        $password = $_SERVER['HTTP_X_PASSWORD'];
+        $username = $_SERVER['PHP_AUTH_USER'];
+        $password = $_SERVER['PHP_AUTH_PW'];
         // Find the user
         $user = User::model()->find('LOWER(username)=?', array(strtolower($username)));
         if ($user === null) {
