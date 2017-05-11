@@ -1,2 +1,7 @@
 protected/config/database.php
 protected/config/main.php
+.idea/deployment.xml
+.idea/htdocs.iml
+.idea/modules.xml
+.idea/vcs.xml
+.idea/workspace.xml

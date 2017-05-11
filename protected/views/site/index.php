@@ -21,7 +21,7 @@ $this->pageTitle=Yii::app()->name;
 	<tbody>
 		<tr>
 			<td>Create</td>
-			<td>tcgmanager.localhost/api/card</td>
+			<td>/api/card</td>
 			<td>POST</td>
 			<td>
 				<pre>name={string}
@@ -45,7 +45,7 @@ quantity={number}
 		</tr>
 		<tr>
 			<td>Get summary of all cards</td>
-			<td>tcgmanager.localhost/api/card</td>
+			<td>/api/card</td>
 			<td>GET</td>
 			<td>
 				Nil
@@ -63,7 +63,7 @@ quantity={number}
 		</tr>
 		<tr>
 			<td>Get single card detail</td>
-			<td>tcgmanager.localhost/api/card/{id}</td>
+			<td>/api/card/{id}</td>
 			<td>GET</td>
 			<td>
 				Nil
@@ -82,7 +82,7 @@ quantity={number}
 		</tr>
 		<tr>
 			<td>Update single card</td>
-			<td>tcgmanager.localhost/api/card/{id}</td>
+			<td>/api/card/{id}</td>
 			<td>PUT</td>
 			<td>
 				<pre>{
@@ -108,7 +108,7 @@ quantity={number}
 		</tr>
 		<tr>
 			<td>Delete single card</td>
-			<td>tcgmanager.localhost/api/card/{id}</td>
+			<td>/api/card/{id}</td>
 			<td>DELETE</td>
 			<td>
 				Nil
