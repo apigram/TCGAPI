@@ -15,6 +15,7 @@
         'enableAjaxValidation' => false,
     )); ?>
 
+  <p>Standard users are able to maintain their collections on this microservice. Developers have the added ability to generate API keys to allow their third-party applications to interface with this microservice.</p>
   <p class="note">Fields with <span class="required">*</span> are required.</p>
 
     <?php echo $form->errorSummary($model); ?>
@@ -47,6 +48,12 @@
       <?php echo $form->labelEx($model, 'email'); ?>
       <?php echo $form->textField($model, 'email'); ?>
       <?php echo $form->error($model, 'email'); ?>
+  </div>
+
+  <div class="row">
+      <?php echo $form->labelEx($model, 'user_type'); ?>
+      <?php echo $form->dropDownList($model, 'user_type',array('standard'=>'Standard', 'developer'=>'Developer')); ?>
+      <?php echo $form->error($model, 'user_type'); ?>
   </div>
 
 

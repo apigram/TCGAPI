@@ -4,7 +4,7 @@
 $this->pageTitle=Yii::app()->name;
 ?>
 
-<?php if (!Yii::app()->user->isGuest):?>
+<?php if (Yii::app()->user->hasState('type') and Yii::app()->user->getState('role') !== 'standard'):?>
   <h1>Welcome, <i><?php echo Yii::app()->user->name?></i></h1>
 
   <p>The Pokemon Trading Card Game Collection API supports the following RESTful actions (NOTE: All actions below require an API key as a URL parameter, identified by 'api'):</p>
@@ -120,7 +120,10 @@ quantity={number}
       </tr>
     </tbody>
   </table>
-    <?php else: ?>
+<?php elseif (Yii::app()->user->hasState('role') and Yii::app()->user->getState('role') === 'standard'): ?>
     <h1>Welcome</h1>
-    <p>Please login to manage your API keys and view the documentation for this microservice.</p>
+    <p>Please login via a compatible third-party application.</p>
+<?php else: ?>
+  <h1>Welcome</h1>
+  <p>Please login using the Login link at the top of the screen.</p>
 <?php endif;?>
