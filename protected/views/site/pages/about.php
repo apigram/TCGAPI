@@ -8,5 +8,7 @@ $this->breadcrumbs=array(
 ?>
 <h1>About</h1>
 
-<p>This is a "static" page. You may change the content of this page
-by updating the file <code><?php echo __FILE__; ?></code>.</p>
+<p>
+  The Pokemon Trading Card Game Collection API is a RESTful microservice that allows third-party applications to store card collections in the cloud, where they can be viewed and assembled into decks.
+  Registered users can invoke actions on the microservice using generated API keys for per-client authentication.
+</p>

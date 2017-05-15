@@ -2,16 +2,6 @@
 
 class m170510_033438_create_user_table extends CDbMigration
 {
-    public function up()
-    {
-
-    }
-
-    public function down()
-    {
-
-    }
-
     // Use safeUp/safeDown to do migration with transaction
     public function safeUp()
     {

@@ -1,29 +1,25 @@
 <?php
 
 /**
- * This is the model class for table "tcg_card".
+ * This is the model class for table "tcg_user_keys".
  *
- * The followings are the available columns in table 'tcg_card':
+ * The followings are the available columns in table 'tcg_user_keys':
  * @property integer $id
- * @property string $image_data
- * @property string $image_type
- * @property string $name
- * @property string $notes
- * @property integer $quantity
- * @property string $date_modified
  * @property integer $user_id
+ * @property string $key_title
+ * @property string $api_key
  *
  * The followings are the available model relations:
  * @property TcgUsers $user
  */
-class Card extends CActiveRecord
+class UserKey extends CActiveRecord
 {
     /**
      * @return string the associated database table name
      */
     public function tableName()
     {
-        return 'tcg_card';
+        return 'tcg_user_keys';
     }
 
     /**
@@ -34,18 +30,12 @@ class Card extends CActiveRecord
         // NOTE: you should only define rules for those attributes that
         // will receive user inputs.
         return array(
-            array('image_data, image_type, name, quantity, date_modified, user_id', 'required'),
-            array('quantity, user_id', 'numerical', 'integerOnly' => true),
-            array('image_type', 'length', 'max' => 20),
-            array('name', 'length', 'max' => 100),
-            array('notes', 'safe'),
+            array('user_id, key_title, api_key', 'required'),
+            array('user_id', 'numerical', 'integerOnly' => true),
+            array('key_title', 'length', 'max' => 50),
             // The following rule is used by search().
             // @todo Please remove those attributes that should not be searched.
-            array(
-                'id, image_data, image_type, name, notes, quantity, date_modified, user_id',
-                'safe',
-                'on' => 'search',
-            ),
+            array('user_id, key_title', 'safe', 'on' => 'search'),
         );
     }
 
@@ -68,13 +58,9 @@ class Card extends CActiveRecord
     {
         return array(
             'id' => 'ID',
-            'image_data' => 'Image Data',
-            'image_type' => 'Image Type',
-            'name' => 'Name',
-            'notes' => 'Notes',
-            'quantity' => 'Quantity',
-            'date_modified' => 'Date Modified',
             'user_id' => 'User',
+            'key_title' => 'Description',
+            'api_key' => 'API Key',
         );
     }
 
@@ -93,17 +79,13 @@ class Card extends CActiveRecord
     public function search()
     {
         // @todo Please modify the following code to remove attributes that should not be searched.
+        $user = User::model()->find('username=?', array(Yii::app()->user->name));
 
         $criteria = new CDbCriteria;
 
         $criteria->compare('id', $this->id);
-        $criteria->compare('image_data', $this->image_data, true);
-        $criteria->compare('image_type', $this->image_type, true);
-        $criteria->compare('name', $this->name, true);
-        $criteria->compare('notes', $this->notes, true);
-        $criteria->compare('quantity', $this->quantity);
-        $criteria->compare('date_modified', $this->date_modified, true);
-        $criteria->compare('user_id', $this->user_id);
+        $criteria->compare('user_id', $user->id);
+        $criteria->compare('key_title', $this->key_title, true);
 
         return new CActiveDataProvider($this, array(
             'criteria' => $criteria,
@@ -112,29 +94,25 @@ class Card extends CActiveRecord
 
     public function beforeValidate()
     {
-        $this->date_modified = date('Y-m-d H:i:s');
-
-        return parent::beforeValidate();
-    }
-
-    public function toJSON()
-    {
-        $output = array();
-
-        foreach ($this->attributes as $var => $value)
-        {
-            if ($var != 'id' and $var != 'user_id')
-                $output[$var] = $value;
+        // Associate the API key with the active user.
+        if (!isset($this->user_id)) {
+            $user = User::model()->find('username=?', array(Yii::app()->user->name));
+            $this->user_id = $user->id;
         }
 
-        return CJSON::encode($output);
+        // Generate the API key if it hasn't already been generated.
+        if (!isset($this->api_key)) {
+            $this->api_key = md5(uniqid(rand(), true));
+        }
+
+        return parent::beforeValidate();
     }
 
     /**
      * Returns the static model of the specified AR class.
      * Please note that you should have this exact method in all your CActiveRecord descendants!
      * @param string $className active record class name.
-     * @return Card the static model class
+     * @return CActiveRecord the static model class
      */
     public static function model($className = __CLASS__)
     {

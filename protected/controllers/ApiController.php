@@ -13,9 +13,10 @@ class ApiController extends Controller
     public function actionList()
     {
         // Get the respective model instance
+        $user = $this->_checkAuth();
         switch ($_GET['model']) {
             case 'card':
-                $models = Card::model()->findAll();
+                $models = Card::model()->findAll('user_id=?', array($user->id));
                 break;
             default:
                 // Model not implemented error
@@ -28,12 +29,12 @@ class ApiController extends Controller
         if (empty($models)) {
             // No
             $this->_sendResponse(200,
-                sprintf('No items were found for model <b>%s</b>', $_GET['model']));
+                sprintf('No items were found for model <b>%s</b> for this user.', $_GET['model']));
         } else {
             // Prepare response
             $rows = array();
             foreach ($models as $model)
-                $rows[] = $model->attributes;
+                $rows[] = CJSON::decode($model->toJSON());
             // Send the response
             $this->_sendResponse(200, CJSON::encode($rows), 'application/json');
         }
@@ -41,6 +42,7 @@ class ApiController extends Controller
 
     public function actionView()
     {
+        $user = $this->_checkAuth();
         // Check if id was submitted via GET
         if (!isset($_GET['id']))
             $this->_sendResponse(500, 'Error: Parameter <b>id</b> is missing');
@@ -57,18 +59,18 @@ class ApiController extends Controller
                 Yii::app()->end();
         }
         // Did we find the requested model? If not, raise an error
-        if (is_null($model))
+        if (is_null($model) or $model->user_id != $user->id)
             $this->_sendResponse(404, 'No Item found with id ' . $_GET['id']);
         else
-            $this->_sendResponse(200, CJSON::encode($model), 'application/json');
+            $this->_sendResponse(200, $model->toJSON(), 'application/json');
     }
 
     /**
-     * Create a new card. NOTE: Request body must be unencoded form data (ie. key=value).
+     * Create a new card. NOTE: Request body must be encoded form data (ie. key=value).
      */
     public function actionCreate()
     {
-        $this->_checkAuth();
+        $user = $this->_checkAuth();
         switch ($_GET['model']) {
             // Get an instance of the respective model
             case 'card':
@@ -90,9 +92,10 @@ class ApiController extends Controller
                     sprintf('Parameter <b>%s</b> is not allowed for model <b>%s</b>', $var,
                         $_GET['model']));
         }
+        $model->user_id = $user->id;
         // Try to save the model
         if ($model->save())
-            $this->_sendResponse(200, CJSON::encode($model), 'application/json');
+            $this->_sendResponse(200, $model->toJSON(), 'application/json');
         else {
             // Errors occurred
             $msg = "<h1>Error</h1>";
@@ -115,7 +118,7 @@ class ApiController extends Controller
      */
     public function actionUpdate()
     {
-        $this->_checkAuth();
+        $user = $this->_checkAuth();
         // Parse the PUT parameters. This didn't work: parse_str(file_get_contents('php://input'), $put_vars);
         $json = file_get_contents('php://input'); //$GLOBALS['HTTP_RAW_POST_DATA'] is not preferred: http://www.php.net/manual/en/ini.core.php#ini.always-populate-raw-post-data
         $put_vars = CJSON::decode($json, true);  //true means use associative array
@@ -132,9 +135,9 @@ class ApiController extends Controller
                 Yii::app()->end();
         }
         // Did we find the requested model? If not, raise an error
-        if ($model === null)
+        if ($model === null or $model->user_id != $user->id)
             $this->_sendResponse(400,
-                sprintf("Error: Didn't find any model <b>%s</b> with ID <b>%s</b>.",
+                sprintf("Error: Didn't find any model <b>%s</b> with ID <b>%s</b> for this user.",
                     $_GET['model'], $_GET['id']));
 
         // Try to assign PUT parameters to attributes
@@ -148,9 +151,11 @@ class ApiController extends Controller
                         $var, $_GET['model']));
             }
         }
+
+        $model->user_id = $user->id;
         // Try to save the model
         if ($model->save())
-            $this->_sendResponse(200, CJSON::encode($model), 'application/json');
+            $this->_sendResponse(200, $model->toJSON(), 'application/json');
         else {
             // prepare the error $msg
             // Errors occurred
@@ -171,7 +176,7 @@ class ApiController extends Controller
 
     public function actionDelete()
     {
-        $this->_checkAuth();
+        $user = $this->_checkAuth();
         switch ($_GET['model']) {
             // Load the respective model
             case 'card':
@@ -184,9 +189,9 @@ class ApiController extends Controller
                 Yii::app()->end();
         }
         // Was a model found? If not, raise an error
-        if ($model === null)
+        if ($model === null or $model->user_id != $user->id)
             $this->_sendResponse(400,
-                sprintf("Error: Didn't find any model <b>%s</b> with ID <b>%s</b>.",
+                sprintf("Error: Didn't find any model <b>%s</b> with ID <b>%s</b> for this user.",
                     $_GET['model'], $_GET['id']));
 
         // Delete the model
@@ -279,21 +284,19 @@ class ApiController extends Controller
 
     private function _checkAuth()
     {
-        // Check if we have the USERNAME and PASSWORD HTTP headers set?
-        if (!(isset($_SERVER['PHP_AUTH_USER']) and isset($_SERVER['PHP_AUTH_PW']))) {
+        // Check if the API key matches any on the database.
+        if (!isset($_GET['api'])) {
             // Error: Unauthorized
             $this->_sendResponse(401);
         }
-        $username = $_SERVER['PHP_AUTH_USER'];
-        $password = $_SERVER['PHP_AUTH_PW'];
-        // Find the user
-        $user = User::model()->find('LOWER(username)=?', array(strtolower($username)));
-        if ($user === null) {
+        $api_user = UserKey::model()->find('api_key=?', array($_GET['api']));
+
+        // Ensure that a valid user is registered to the given API key.
+        if ($api_user->user === null) {
             // Error: Unauthorized
-            $this->_sendResponse(401, 'Error: User Name is invalid');
-        } else if (!$user->validatePassword($password)) {
-            // Error: Unauthorized
-            $this->_sendResponse(401, 'Error: User Password is invalid');
+            $this->_sendResponse(401, 'Error: API key is not registered to a valid user.');
         }
+
+        return $api_user->user;
     }
 }
