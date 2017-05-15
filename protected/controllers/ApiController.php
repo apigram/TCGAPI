@@ -66,7 +66,7 @@ class ApiController extends Controller
     }
 
     /**
-     * Create a new card. NOTE: Request body must be unencoded form data (ie. key=value).
+     * Create a new card. NOTE: Request body must be encoded form data (ie. key=value).
      */
     public function actionCreate()
     {
@@ -284,23 +284,19 @@ class ApiController extends Controller
 
     private function _checkAuth()
     {
-        // Check if we have the USERNAME and PASSWORD HTTP headers set?
-        if (!(isset($_SERVER['PHP_AUTH_USER']) and isset($_SERVER['PHP_AUTH_PW']))) {
+        // Check if the API key matches any on the database.
+        if (!isset($_GET['api'])) {
             // Error: Unauthorized
             $this->_sendResponse(401);
         }
-        $username = $_SERVER['PHP_AUTH_USER'];
-        $password = $_SERVER['PHP_AUTH_PW'];
-        // Find the user
-        $user = User::model()->find('LOWER(username)=?', array(strtolower($username)));
-        if ($user === null) {
+        $api_user = UserKey::model()->find('api_key=?', array($_GET['api']));
+
+        // Ensure that a valid user is registered to the given API key.
+        if ($api_user->user === null) {
             // Error: Unauthorized
-            $this->_sendResponse(401, 'Error: User Name is invalid');
-        } else if (!$user->validatePassword($password)) {
-            // Error: Unauthorized
-            $this->_sendResponse(401, 'Error: User Password is invalid');
+            $this->_sendResponse(401, 'Error: API key is not registered to a valid user.');
         }
 
-        return $user;
+        return $api_user->user;
     }
 }

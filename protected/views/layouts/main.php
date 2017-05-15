@@ -34,6 +34,7 @@
               array('label' => 'Home', 'url' => array('/site/index')),
               array('label' => 'About', 'url' => array('/site/page', 'view' => 'about')),
               array('label' => 'Contact', 'url' => array('/site/contact')),
+              array('label' => 'Manage API Keys', 'url' => array('/userKey/admin'), 'visible' => !Yii::app()->user->isGuest),
               array('label' => 'Login', 'url' => array('/site/login'), 'visible' => Yii::app()->user->isGuest),
               array('label' => 'Register', 'url' => array('/site/register'), Yii::app()->user->isGuest),
               array(
