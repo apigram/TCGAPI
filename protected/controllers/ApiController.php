@@ -18,6 +18,9 @@ class ApiController extends Controller
             case 'card':
                 $models = Card::model()->findAll('user_id=?', array($user->id));
                 break;
+            case 'deck':
+                $models = Deck::model()->findAll('user_id=?', array($user->id));
+                break;
             default:
                 // Model not implemented error
                 $this->_sendResponse(501, sprintf(
@@ -52,6 +55,9 @@ class ApiController extends Controller
             case 'card':
                 $model = Card::model()->findByPk($_GET['id']);
                 break;
+            case 'deck':
+                $model = Deck::model()->findByPk($_GET['id']);
+                break;
             default:
                 $this->_sendResponse(501, sprintf(
                     'Mode <b>view</b> is not implemented for model <b>%s</b>',
@@ -75,6 +81,9 @@ class ApiController extends Controller
             // Get an instance of the respective model
             case 'card':
                 $model = new Card;
+                break;
+            case 'deck':
+                $model = new Deck;
                 break;
             default:
                 $this->_sendResponse(501,
@@ -127,6 +136,9 @@ class ApiController extends Controller
             // Find respective model
             case 'card':
                 $model = Card::model()->findByPk($_GET['id']);
+                break;
+            case 'deck':
+                $model = Deck::model()->findByPk($_GET['id']);
                 break;
             default:
                 $this->_sendResponse(501,
@@ -181,6 +193,9 @@ class ApiController extends Controller
             // Load the respective model
             case 'card':
                 $model = Card::model()->findByPk($_GET['id']);
+                break;
+            case 'deck':
+                $model = Deck::model()->findByPk($_GET['id']);
                 break;
             default:
                 $this->_sendResponse(501,

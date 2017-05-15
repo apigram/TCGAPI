@@ -1,29 +1,25 @@
 <?php
 
 /**
- * This is the model class for table "tcg_card".
+ * This is the model class for table "tcg_decks".
  *
- * The followings are the available columns in table 'tcg_card':
+ * The followings are the available columns in table 'tcg_decks':
  * @property integer $id
- * @property string $image_data
- * @property string $image_type
  * @property string $name
- * @property string $notes
- * @property integer $quantity
- * @property string $date_modified
  * @property integer $user_id
  *
  * The followings are the available model relations:
+ * @property TcgDeckCards[] $tcgDeckCards
  * @property TcgUsers $user
  */
-class Card extends CActiveRecord
+class Deck extends CActiveRecord
 {
     /**
      * @return string the associated database table name
      */
     public function tableName()
     {
-        return 'tcg_card';
+        return 'tcg_decks';
     }
 
     /**
@@ -34,18 +30,12 @@ class Card extends CActiveRecord
         // NOTE: you should only define rules for those attributes that
         // will receive user inputs.
         return array(
-            array('image_data, image_type, name, quantity, date_modified, user_id', 'required'),
-            array('quantity, user_id', 'numerical', 'integerOnly' => true),
-            array('image_type', 'length', 'max' => 20),
-            array('name', 'length', 'max' => 100),
-            array('notes', 'safe'),
+            array('name, user_id', 'required'),
+            array('user_id', 'numerical', 'integerOnly' => true),
+            array('name', 'length', 'max' => 30),
             // The following rule is used by search().
             // @todo Please remove those attributes that should not be searched.
-            array(
-                'id, image_data, image_type, name, notes, quantity, date_modified, user_id',
-                'safe',
-                'on' => 'search',
-            ),
+            array('id, name, user_id', 'safe', 'on' => 'search'),
         );
     }
 
@@ -57,8 +47,8 @@ class Card extends CActiveRecord
         // NOTE: you may need to adjust the relation name and the related
         // class name for the relations automatically generated below.
         return array(
+            'cards' => array(self::MANY_MANY, 'Card', 'tcg_deck_cards(deck_id,card_id)'),
             'user' => array(self::BELONGS_TO, 'User', 'user_id'),
-            'decks' => array(self::MANY_MANY, 'Deck', 'tcg_deck_cards(card_id, deck_id)')
         );
     }
 
@@ -69,12 +59,7 @@ class Card extends CActiveRecord
     {
         return array(
             'id' => 'ID',
-            'image_data' => 'Image Data',
-            'image_type' => 'Image Type',
             'name' => 'Name',
-            'notes' => 'Notes',
-            'quantity' => 'Quantity',
-            'date_modified' => 'Date Modified',
             'user_id' => 'User',
         );
     }
@@ -98,12 +83,7 @@ class Card extends CActiveRecord
         $criteria = new CDbCriteria;
 
         $criteria->compare('id', $this->id);
-        $criteria->compare('image_data', $this->image_data, true);
-        $criteria->compare('image_type', $this->image_type, true);
         $criteria->compare('name', $this->name, true);
-        $criteria->compare('notes', $this->notes, true);
-        $criteria->compare('quantity', $this->quantity);
-        $criteria->compare('date_modified', $this->date_modified, true);
         $criteria->compare('user_id', $this->user_id);
 
         return new CActiveDataProvider($this, array(
@@ -111,30 +91,16 @@ class Card extends CActiveRecord
         ));
     }
 
-    public function beforeValidate()
-    {
-        $this->date_modified = date('Y-m-d H:i:s');
-
-        return parent::beforeValidate();
-    }
-
     public function toJSON()
     {
         $output = array();
-        $decks = array();
 
+        // though there is currently only one user-visible field in this model, we will use a loop in case more fields are added in the future.
         foreach ($this->attributes as $var => $value)
         {
             if ($var != 'user_id')
                 $output[$var] = $value;
         }
-
-        // Generate the list of decks the card is in based on its many-many relationship.
-        foreach ($this->decks as $deck)
-        {
-            $decks[] = CJSON::decode($deck->toJSON());
-        }
-        $output['decks'] = $decks;
 
         return CJSON::encode($output);
     }
@@ -143,7 +109,7 @@ class Card extends CActiveRecord
      * Returns the static model of the specified AR class.
      * Please note that you should have this exact method in all your CActiveRecord descendants!
      * @param string $className active record class name.
-     * @return Card the static model class
+     * @return Deck the static model class
      */
     public static function model($className = __CLASS__)
     {
