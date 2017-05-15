@@ -10,6 +10,9 @@ class ApiController extends Controller
         return array();
     }
 
+    /**
+     * Get a list of all cards/decks registered by the user.
+     */
     public function actionList()
     {
         // Get the respective model instance
@@ -43,6 +46,9 @@ class ApiController extends Controller
         }
     }
 
+    /**
+     * Get a single card/deck registered to the user.
+     */
     public function actionView()
     {
         $user = $this->_checkAuth();
@@ -72,10 +78,12 @@ class ApiController extends Controller
     }
 
     /**
-     * Create a new card. NOTE: Request body must be encoded form data (ie. key=value).
+     * Create a new card or deck.
      */
     public function actionCreate()
     {
+        $json = file_get_contents('php://input');
+        $post_vars = CJSON::decode($json);
         $user = $this->_checkAuth();
         switch ($_GET['model']) {
             // Get an instance of the respective model
@@ -84,6 +92,7 @@ class ApiController extends Controller
                 break;
             case 'deck':
                 $model = new Deck;
+                $cardList = array();
                 break;
             default:
                 $this->_sendResponse(501,
@@ -92,29 +101,68 @@ class ApiController extends Controller
                 Yii::app()->end();
         }
         // Try to assign POST values to attributes
-        foreach ($_POST as $var => $value) {
+        foreach ($post_vars as $var => $value) {
             // Does the model have this attribute? If not raise an error
-            if ($model->hasAttribute($var))
+            if ($model->hasAttribute($var)) {
                 $model->$var = $value;
-            else
+            } elseif ($var === 'cards') {
+                foreach ($value as $card) {
+                    $deckCard = new DeckCard;
+                    foreach ($card as $i => $val) {
+                        if ($deckCard->hasAttribute($i)) {
+                            $deckCard->$i = $val;
+                        } else {
+                            $this->_sendResponse(500,
+                                sprintf('Parameter <b>%s</b> is not allowed for model <b>%s</b>', $i,
+                                    $_GET['model']));
+                        }
+                    }
+                    $cardList[] = $deckCard;
+                }
+            } else {
                 $this->_sendResponse(500,
-                    sprintf('Parameter <b>%s</b> is not allowed for model <b>%s</b>', $var,
-                        $_GET['model']));
+                    sprintf('Parameter <b>%s</b> is not allowed for model <b>%s</b>', $var, $_GET['model']));
+            }
         }
         $model->user_id = $user->id;
+
         // Try to save the model
-        if ($model->save())
+        $transaction = Yii::app()->db->beginTransaction();
+        if ($model->save()) {
+            foreach ($cardList as $card) {
+                // If at least one card association cannot be saved, terminate.
+                if (!$card->save()) {
+                    // Errors occurred
+                    $transaction->rollback();
+                    $msg = "<h1>Error</h1>";
+                    $msg .= sprintf("Couldn't create model <b>%s</b>", $_GET['model']);
+                    $msg .= "<ul>";
+                    foreach ($card->errors as $attribute => $attr_errors) {
+                        $msg .= "<li>Attribute: $attribute</li>";
+                        $msg .= "<ul>";
+                        foreach ($attr_errors as $attr_error) {
+                            $msg .= "<li>$attr_error</li>";
+                        }
+                        $msg .= "</ul>";
+                    }
+                    $msg .= "</ul>";
+                    $this->_sendResponse(500, $msg);
+                }
+            }
+            $transaction->commit();
             $this->_sendResponse(200, $model->toJSON(), 'application/json');
-        else {
+        } else {
             // Errors occurred
+            $transaction->rollback();
             $msg = "<h1>Error</h1>";
             $msg .= sprintf("Couldn't create model <b>%s</b>", $_GET['model']);
             $msg .= "<ul>";
             foreach ($model->errors as $attribute => $attr_errors) {
                 $msg .= "<li>Attribute: $attribute</li>";
                 $msg .= "<ul>";
-                foreach ($attr_errors as $attr_error)
+                foreach ($attr_errors as $attr_error) {
                     $msg .= "<li>$attr_error</li>";
+                }
                 $msg .= "</ul>";
             }
             $msg .= "</ul>";
@@ -123,7 +171,7 @@ class ApiController extends Controller
     }
 
     /**
-     * Endpoint for updating a card. NOTE: Request body must be in JSON for this action.
+     * Update an existing card or deck.
      */
     public function actionUpdate()
     {
@@ -139,6 +187,9 @@ class ApiController extends Controller
                 break;
             case 'deck':
                 $model = Deck::model()->findByPk($_GET['id']);
+                $cardList = array();
+                foreach (DeckCard::model()->findAll('deck_id=?', array($_GET['id'])) as $card)
+                    $cardList[$card->card_id] = $card;
                 break;
             default:
                 $this->_sendResponse(501,
@@ -147,16 +198,49 @@ class ApiController extends Controller
                 Yii::app()->end();
         }
         // Did we find the requested model? If not, raise an error
-        if ($model === null or $model->user_id != $user->id)
+        if ($model === null or $model->user_id != $user->id) {
             $this->_sendResponse(400,
                 sprintf("Error: Didn't find any model <b>%s</b> with ID <b>%s</b> for this user.",
                     $_GET['model'], $_GET['id']));
+        }
 
         // Try to assign PUT parameters to attributes
         foreach ($put_vars as $var => $value) {
             // Does model have this attribute? If not, raise an error
-            if ($model->hasAttribute($var))
+            if ($model->hasAttribute($var)) {
                 $model->$var = $value;
+            }
+            elseif ($var === 'cards') {
+                foreach ($value as $card) {
+                    // If the card is not in the array, create a new one.
+                    if (!isset($cardList[$card->card_id])) {
+                        $deckCard = new DeckCard;
+                        foreach ($card as $i => $val) {
+                            if ($deckCard->hasAttribute($i)) {
+                                $deckCard->$i = $val;
+                            } else {
+                                $this->_sendResponse(500,
+                                    sprintf('Parameter <b>%s</b> is not allowed for model <b>%s</b>', $i,
+                                        $_GET['model']));
+                            }
+                        }
+                    }
+                    else
+                    {
+                        foreach ($card as $i => $val) {
+                            if ($cardList[$card->card_id]->hasAttribute($i)) {
+                                $cardList[$card->card_id]->$i = $val;
+                            } else {
+                                $this->_sendResponse(500,
+                                    sprintf('Parameter <b>%s</b> is not allowed for model <b>%s</b>', $i,
+                                        $_GET['model']));
+                            }
+                        }
+                    }
+
+                    $cardList[$deckCard->card_id] = $deckCard;
+                }
+            }
             else {
                 $this->_sendResponse(500,
                     sprintf('Parameter <b>%s</b> is not allowed for model <b>%s</b>',
@@ -165,12 +249,36 @@ class ApiController extends Controller
         }
 
         $model->user_id = $user->id;
+
         // Try to save the model
-        if ($model->save())
+        $transaction = Yii::app()->db->beginTransaction();
+        if ($model->save()) {
+            foreach ($cardList as $card) {
+                // If at least one card association cannot be saved, terminate.
+                if (!$card->save()) {
+                    // Errors occurred
+                    $transaction->rollback();
+                    $msg = "<h1>Error</h1>";
+                    $msg .= sprintf("Couldn't update model <b>%s</b>", $_GET['model']);
+                    $msg .= "<ul>";
+                    foreach ($card->errors as $attribute => $attr_errors) {
+                        $msg .= "<li>Attribute: $attribute</li>";
+                        $msg .= "<ul>";
+                        foreach ($attr_errors as $attr_error)
+                            $msg .= "<li>$attr_error</li>";
+                        $msg .= "</ul>";
+                    }
+                    $msg .= "</ul>";
+                    $this->_sendResponse(500, $msg);
+                }
+            }
+            $transaction->commit();
             $this->_sendResponse(200, $model->toJSON(), 'application/json');
+        }
         else {
             // prepare the error $msg
             // Errors occurred
+            $transaction->rollback();
             $msg = "<h1>Error</h1>";
             $msg .= sprintf("Couldn't update model <b>%s</b>", $_GET['model']);
             $msg .= "<ul>";
@@ -186,6 +294,9 @@ class ApiController extends Controller
         }
     }
 
+    /**
+     * Delete an existing card or deck.
+     */
     public function actionDelete()
     {
         $user = $this->_checkAuth();
