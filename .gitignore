@@ -15,3 +15,5 @@ themes/classic/views/site/
 themes/classic/views/system/
 /.project
 /.buildpath
+/protected/config/database.php
+/protected/config/main.php
