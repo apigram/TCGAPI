@@ -58,7 +58,7 @@ class Card extends CActiveRecord
         // class name for the relations automatically generated below.
         return array(
             'user' => array(self::BELONGS_TO, 'User', 'user_id'),
-            'decks' => array(self::MANY_MANY, 'Deck', 'tcg_deck_cards(card_id, deck_id)')
+            'decks' => array(self::MANY_MANY, 'Deck', 'tcg_deck_cards(card_id, deck_id)'),
         );
     }
 
@@ -118,7 +118,22 @@ class Card extends CActiveRecord
         return parent::beforeValidate();
     }
 
-    public function toJSON()
+    public function getSummary($deck_id)
+    {
+        $output = array();
+
+        foreach ($this->attributes as $var => $value)
+        {
+            if ($var === 'id' or $var === 'name')
+                $output[$var] = $value;
+        }
+        $deckCard = DeckCard::model()->find('deck_id=? AND card_id=?', array($deck_id, $this->id));
+        $output['quantity'] = $deckCard->quantity;
+
+        return CJSON::encode($output);
+    }
+
+    public function getDetails()
     {
         $output = array();
         $decks = array();
@@ -132,7 +147,7 @@ class Card extends CActiveRecord
         // Generate the list of decks the card is in based on its many-many relationship.
         foreach ($this->decks as $deck)
         {
-            $decks[] = CJSON::decode($deck->toJSON());
+            $decks[] = CJSON::decode($deck->getSummary());
         }
         $output['decks'] = $decks;
 

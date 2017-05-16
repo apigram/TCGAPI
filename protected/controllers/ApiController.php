@@ -40,7 +40,7 @@ class ApiController extends Controller
             // Prepare response
             $rows = array();
             foreach ($models as $model)
-                $rows[] = CJSON::decode($model->toJSON());
+                $rows[] = CJSON::decode($model->getDetails());
             // Send the response
             $this->_sendResponse(200, CJSON::encode($rows), 'application/json');
         }
@@ -74,7 +74,7 @@ class ApiController extends Controller
         if (is_null($model) or $model->user_id != $user->id)
             $this->_sendResponse(404, 'No Item found with id ' . $_GET['id']);
         else
-            $this->_sendResponse(200, $model->toJSON(), 'application/json');
+            $this->_sendResponse(200, $model->getDetails(), 'application/json');
     }
 
     /**
@@ -108,15 +108,8 @@ class ApiController extends Controller
             } elseif ($var === 'cards') {
                 foreach ($value as $card) {
                     $deckCard = new DeckCard;
-                    foreach ($card as $i => $val) {
-                        if ($deckCard->hasAttribute($i)) {
-                            $deckCard->$i = $val;
-                        } else {
-                            $this->_sendResponse(500,
-                                sprintf('Parameter <b>%s</b> is not allowed for model <b>%s</b>', $i,
-                                    $_GET['model']));
-                        }
-                    }
+                    $deckCard->card_id = $card['id'];
+                    $deckCard->quantity = $card['quantity'];
                     $cardList[] = $deckCard;
                 }
             } else {
@@ -131,6 +124,7 @@ class ApiController extends Controller
         if ($model->save()) {
             foreach ($cardList as $card) {
                 // If at least one card association cannot be saved, terminate.
+                $card->deck_id =$model->getPrimaryKey();
                 if (!$card->save()) {
                     // Errors occurred
                     $transaction->rollback();
@@ -150,7 +144,7 @@ class ApiController extends Controller
                 }
             }
             $transaction->commit();
-            $this->_sendResponse(200, $model->toJSON(), 'application/json');
+            $this->_sendResponse(200, $model->getDetails(), 'application/json');
         } else {
             // Errors occurred
             $transaction->rollback();
@@ -212,33 +206,39 @@ class ApiController extends Controller
             }
             elseif ($var === 'cards') {
                 foreach ($value as $card) {
-                    // If the card is not in the array, create a new one.
-                    if (!isset($cardList[$card->card_id])) {
+                    // If the card is not in the existing card array, create a new one.
+                    if (!isset($cardList[$card->id])) {
                         $deckCard = new DeckCard;
-                        foreach ($card as $i => $val) {
-                            if ($deckCard->hasAttribute($i)) {
-                                $deckCard->$i = $val;
-                            } else {
-                                $this->_sendResponse(500,
-                                    sprintf('Parameter <b>%s</b> is not allowed for model <b>%s</b>', $i,
-                                        $_GET['model']));
-                            }
-                        }
+                        $deckCard->card_id = $card['id'];
+                        $deckCard->deck_id = $model->id;
+                        $deckCard->quantity = $card['quantity'];
+                        $cardList[$deckCard->card_id] = $deckCard;
                     }
                     else
                     {
-                        foreach ($card as $i => $val) {
-                            if ($cardList[$card->card_id]->hasAttribute($i)) {
-                                $cardList[$card->card_id]->$i = $val;
-                            } else {
-                                $this->_sendResponse(500,
-                                    sprintf('Parameter <b>%s</b> is not allowed for model <b>%s</b>', $i,
-                                        $_GET['model']));
-                            }
+                        // Quantity is the only deck_card field that can be updated, so update the quantity.
+                        $cardList[$card->id]->quantity = $card['quantity'];
+                    }
+                }
+
+                // Iterate through the existing card list and check if that card is in the PUT data.
+                // If not, delete the deck_card association.
+                foreach ($cardList as $pos => $deckCard)
+                {
+                    $found = false;
+                    foreach($value as $card)
+                    {
+                        if ($deckCard->card_id === $card['id']) {
+                            // As a deck_card link can only appear once in a deck (with a quantity of up to 4), break the loop immediately once found.
+                            $found = true;
+                            break;
                         }
                     }
 
-                    $cardList[$deckCard->card_id] = $deckCard;
+                    if (!$found)
+                    {
+                        $cardList[$pos]->delete();
+                    }
                 }
             }
             else {
@@ -250,33 +250,43 @@ class ApiController extends Controller
 
         $model->user_id = $user->id;
 
+        if (isset($cardList))
+        {
+            foreach ($cardList as $card)
+            {
+                $model->cardAdded($card->quantity);
+            }
+        }
+
         // Try to save the model
         $transaction = Yii::app()->db->beginTransaction();
         if ($model->save()) {
-            foreach ($cardList as $card) {
-                // If at least one card association cannot be saved, terminate.
-                if (!$card->save()) {
-                    // Errors occurred
-                    $transaction->rollback();
-                    $msg = "<h1>Error</h1>";
-                    $msg .= sprintf("Couldn't update model <b>%s</b>", $_GET['model']);
-                    $msg .= "<ul>";
-                    foreach ($card->errors as $attribute => $attr_errors) {
-                        $msg .= "<li>Attribute: $attribute</li>";
+            if (isset($cardList)) {
+                foreach ($cardList as $card) {
+                    // If at least one card association cannot be saved, terminate.
+                    if (!$card->save()) {
+                        // Errors occurred
+                        $transaction->rollback();
+                        $msg = "<h1>Error</h1>";
+                        $msg .= sprintf("Couldn't update model <b>%s</b>", $_GET['model']);
                         $msg .= "<ul>";
-                        foreach ($attr_errors as $attr_error)
-                            $msg .= "<li>$attr_error</li>";
+                        foreach ($card->errors as $attribute => $attr_errors) {
+                            $msg .= "<li>Attribute: $attribute</li>";
+                            $msg .= "<ul>";
+                            foreach ($attr_errors as $attr_error) {
+                                $msg .= "<li>$attr_error</li>";
+                            }
+                            $msg .= "</ul>";
+                        }
                         $msg .= "</ul>";
+                        $this->_sendResponse(500, $msg);
                     }
-                    $msg .= "</ul>";
-                    $this->_sendResponse(500, $msg);
                 }
             }
             $transaction->commit();
-            $this->_sendResponse(200, $model->toJSON(), 'application/json');
+            $this->_sendResponse(200, $model->getDetails(), 'application/json');
         }
         else {
-            // prepare the error $msg
             // Errors occurred
             $transaction->rollback();
             $msg = "<h1>Error</h1>";

@@ -7,19 +7,26 @@
  * @property integer $id
  * @property string $name
  * @property integer $user_id
+ * @property date $date_modified
  *
  * The followings are the available model relations:
- * @property TcgDeckCards[] $tcgDeckCards
- * @property TcgUsers $user
+ * @property Card[] $cards
+ * @property User $user
  */
 class Deck extends CActiveRecord
 {
+    public $numCards = 0;
     /**
      * @return string the associated database table name
      */
     public function tableName()
     {
         return 'tcg_decks';
+    }
+
+    public function cardAdded($quantity)
+    {
+        $this->numCards += $quantity;
     }
 
     /**
@@ -30,8 +37,9 @@ class Deck extends CActiveRecord
         // NOTE: you should only define rules for those attributes that
         // will receive user inputs.
         return array(
-            array('name, user_id', 'required'),
+            array('name, user_id, date_modified', 'required'),
             array('user_id', 'numerical', 'integerOnly' => true),
+            array('numCards', 'numerical', 'min' => 60, 'max'=> 60),
             array('name', 'length', 'max' => 30),
             // The following rule is used by search().
             // @todo Please remove those attributes that should not be searched.
@@ -61,6 +69,7 @@ class Deck extends CActiveRecord
             'id' => 'ID',
             'name' => 'Name',
             'user_id' => 'User',
+            'numCards' => 'Number of cards'
         );
     }
 
@@ -91,9 +100,24 @@ class Deck extends CActiveRecord
         ));
     }
 
-    public function toJSON()
+    public function getSummary()
     {
         $output = array();
+
+        // though there is currently only one user-visible field in this model, we will use a loop in case more fields are added in the future.
+        foreach ($this->attributes as $var => $value)
+        {
+            if ($var != 'user_id' and $var != 'date_modified')
+                $output[$var] = $value;
+        }
+
+        return CJSON::encode($output);
+    }
+
+    public function getDetails()
+    {
+        $output = array();
+        $cards = array();
 
         // though there is currently only one user-visible field in this model, we will use a loop in case more fields are added in the future.
         foreach ($this->attributes as $var => $value)
@@ -102,7 +126,25 @@ class Deck extends CActiveRecord
                 $output[$var] = $value;
         }
 
+        foreach ($this->cards as $card)
+            $cards[] = CJSON::decode($card->getSummary($this->id));
+
+        $output['cards'] = $cards;
+
         return CJSON::encode($output);
+    }
+
+    public function beforeValidate()
+    {
+        $this->date_modified = date('Y-m-d H:i:s');
+
+        return parent::beforeValidate();
+    }
+
+    public function afterSave()
+    {
+        // reset the counter.
+        $this->numCards = 0;
     }
 
     /**

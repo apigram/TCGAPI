@@ -8,10 +8,11 @@
  * @property integer $deck_id
  * @property integer $card_id
  * @property integer $quantity
+ * @property date $date_modified
  *
  * The followings are the available model relations:
- * @property TcgDecks $deck
- * @property TcgCard $card
+ * @property Deck $deck
+ * @property Card $card
  */
 class DeckCard extends CActiveRecord
 {
@@ -31,8 +32,9 @@ class DeckCard extends CActiveRecord
         // NOTE: you should only define rules for those attributes that
         // will receive user inputs.
         return array(
-            array('deck_id, card_id, quantity', 'required'),
+            array('deck_id, card_id, quantity, date_modified', 'required'),
             array('deck_id, card_id, quantity', 'numerical', 'integerOnly' => true),
+            array('quantity', 'numerical', 'min' => 1, 'max' => 4), // no more than 4 identically named cards can be added to a deck. Additionally, quantity must be at least 1.
             // The following rule is used by search().
             // @todo Please remove those attributes that should not be searched.
             array('id, deck_id, card_id, quantity', 'safe', 'on' => 'search'),
@@ -63,6 +65,13 @@ class DeckCard extends CActiveRecord
             'card_id' => 'Card',
             'quantity' => 'Quantity',
         );
+    }
+
+    public function beforeValidate()
+    {
+        $this->date_modified = date('Y-m-d H:i:s');
+
+        return parent::beforeValidate();
     }
 
     /**
