@@ -9,7 +9,7 @@ class m170512_055951_create_api_key_table extends CDbMigration
             'user_id' => 'int NOT NULL',
             'key_title' => 'varchar(50) NOT NULL',
             'api_key' => 'varchar(32) NOT NULL'
-        ));
+        ), 'ENGINE=InnoDB');
 
         $this->addForeignKey('tcg_user_keys_fk1','tcg_user_keys', 'user_id', 'tcg_users', 'id');
         $this->createIndex('tcg_user_keys_uk1', 'tcg_user_keys', 'api_key', true);
