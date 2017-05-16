@@ -4,7 +4,7 @@
 $this->pageTitle=Yii::app()->name;
 ?>
 
-<?php if (Yii::app()->user->hasState('type') and Yii::app()->user->getState('role') !== 'standard'):?>
+<?php if (Yii::app()->user->hasState('role') and Yii::app()->user->getState('role') !== 'standard'):?>
   <h1>Welcome, <i><?php echo Yii::app()->user->name?></i></h1>
 
   <p>The Pokemon Trading Card Game Collection API supports the following RESTful actions (NOTE: All actions below require an API key as a URL parameter, identified by 'api'):</p>
